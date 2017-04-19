@@ -65,9 +65,14 @@ class MainHandler(Handler):
         validUsername = valid_username(username)
         validPassword = valid_password(password)
         validEmail = valid_email(email)
+
+        # Set Cookie
+        
+
         # If no error pops, render welcome.html, otherwise render signupform and send error variables to it
         if (passwordsMatch and validUsername and validPassword and validEmail): 
-            #self.render("welcome.html", username = username)
+            self.render("welcome.html", username = username)
+            self.response.headers.add_header('Set-Cookie', 'name= '+str(username)+'; Path=/')
             self.redirect('/welcome?username='+username)
         else:
             self.render("signupform.html", passwordsMatch = passwordsMatch, validUsername = validUsername, 
