@@ -21,6 +21,23 @@ template_dir = os.path.join(os.path.dirname(__file__),'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                 autoescape = True)
 
+# Validation Functions:
+def doPasswordsMatch(password, verify):
+    return password == verify
+USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+def valid_username(username):
+    return USER_RE.match(username)
+PASS_RE = re.compile(r"^.{3,20}$")
+def valid_password(password):
+    return PASS_RE.match(password)
+EMAIL_RE = re.compile(r"^[\S]+@[\S]+.[\S]+$")
+def valid_email(email):
+    # Email is optional
+    if email:
+        return EMAIL_RE.match(email)
+    else:
+        return True
+
 ### All future classes will inherit from this class. Defines shorter named functions for 
 ### faster coding.
 class Handler(webapp2.RequestHandler):
