@@ -58,7 +58,6 @@ class MainHandler(Handler):
                         validPassword = True, validEmail = True)
     def post(self):
         # Get user inputs and assign to variables
-        global username
         username = self.request.get("username")
         password = self.request.get("password")
         verify = self.request.get("verify")
@@ -77,7 +76,7 @@ class MainHandler(Handler):
         def hash_str(s):
             return hmac.new(secretString, s).hexdigest()
         
-        # Define function to combine username with pipe and then hash like this "username | hash"
+        # Define function to combine 'username' + '|' + 'hash' like this 'username | hash'
         def make_secure_val(s):
             return "%s|%s" % (s, hash_str(s))
         
@@ -90,20 +89,47 @@ class MainHandler(Handler):
         # Assign cookie value as concatenation of secret string and username
         cookieValue = make_secure_val(username)
 
+
         # Set Cookie
-        self.response.headers.add_header('Set-Cookie', 'name= '+str(cookieValue)+'; Path=/')
+        self.response.headers.add_header('Set-Cookie', 'name='+str(cookieValue)+'; Path=/')
+        cookieUsername = self.request.cookies.get('name')
+        secureValue = check_secure_val(cookieUsername)
 
         # If no error pops, render welcome.html, otherwise render signupform and send error variables to it
-        if (passwordsMatch and validUsername and validPassword and validEmail): #and check_secure_val(username)):             
+        if (passwordsMatch and validUsername and validPassword and validEmail and secureValue):            
             #self.render("welcome.html", username = username)
             self.redirect('/welcome')
         else:
             self.render("signupform.html", passwordsMatch = passwordsMatch, validUsername = validUsername, 
                         validPassword = validPassword, validEmail = validEmail, username = username, email = email)
+
+
+
 class Welcome(MainHandler):
     def get(self):
-        #username = self.request.cookies.get(str(cookieValue))
-        self.render("welcome.html", username = username)
+        username = self.request.cookies.get('name')
+        self.render("welcome.html", username = username.split('|')[0])
+        # Set secret string for cookie hashing
+        secretString = 'beastingandfeasting'
+
+        # Define function to hash value
+        def hash_str(s):
+            return hmac.new(secretString, s).hexdigest()
+        
+        # Define function to combine 'username' + '|' + 'hash' like this 'username | hash'
+        def make_secure_val(s):
+            return "%s|%s" % (s, hash_str(s))
+        
+        # Define function to check if username matches hash of username
+        def check_secure_val(h):
+            val = h.split('|')[0]
+            if h == make_secure_val(val):
+                return val
+        
+        secureValue = check_secure_val(username)
+        
+        if not secureValue:
+            self.redirect('/signup')
 
 app = webapp2.WSGIApplication([
     ('/signup', MainHandler),
