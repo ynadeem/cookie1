@@ -13,8 +13,11 @@ import logging ### Allows use of logging functions to help with debugging
 import jinja2 ### Used in html templates
 import webapp2
 
-### Import db for database
+# Import db for database
 from google.appengine.ext import db 
+
+# Import HMAC for Cookie hashing
+import hmac
 
 ### Jinja
 template_dir = os.path.join(os.path.dirname(__file__),'templates')
@@ -55,6 +58,7 @@ class MainHandler(Handler):
                         validPassword = True, validEmail = True)
     def post(self):
         # Get user inputs and assign to variables
+        global username
         username = self.request.get("username")
         password = self.request.get("password")
         verify = self.request.get("verify")
@@ -66,20 +70,39 @@ class MainHandler(Handler):
         validPassword = valid_password(password)
         validEmail = valid_email(email)
 
-        # Set Cookie
+        # Set secret string for cookie hashing
+        secretString = 'beastingandfeasting'
+
+        # Define function to hash value
+        def hash_str(s):
+            return hmac.new(secretString, s).hexdigest()
         
+        # Define function to combine username with pipe and then hash like this "username | hash"
+        def make_secure_val(s):
+            return "%s|%s" % (s, hash_str(s))
+        
+        # Define function to check if username matches hash of username
+        def check_secure_val(h):
+            val = h.split('|')[0]
+            if h == make_secure_val(val):
+                return val
+
+        # Assign cookie value as concatenation of secret string and username
+        cookieValue = make_secure_val(username)
+
+        # Set Cookie
+        self.response.headers.add_header('Set-Cookie', 'name= '+str(cookieValue)+'; Path=/')
 
         # If no error pops, render welcome.html, otherwise render signupform and send error variables to it
-        if (passwordsMatch and validUsername and validPassword and validEmail): 
-            self.render("welcome.html", username = username)
-            self.response.headers.add_header('Set-Cookie', 'name= '+str(username)+'; Path=/')
-            self.redirect('/welcome?username='+username)
+        if (passwordsMatch and validUsername and validPassword and validEmail): #and check_secure_val(username)):             
+            #self.render("welcome.html", username = username)
+            self.redirect('/welcome')
         else:
             self.render("signupform.html", passwordsMatch = passwordsMatch, validUsername = validUsername, 
                         validPassword = validPassword, validEmail = validEmail, username = username, email = email)
-class Welcome(Handler):
+class Welcome(MainHandler):
     def get(self):
-        username = self.request.get("username")
+        #username = self.request.cookies.get(str(cookieValue))
         self.render("welcome.html", username = username)
 
 app = webapp2.WSGIApplication([
