@@ -14,7 +14,7 @@ import jinja2 ### Used in html templates
 import webapp2
 
 ### Import db for database
-# from google.appengine.ext import db 
+from google.appengine.ext import db 
 
 ### Jinja
 template_dir = os.path.join(os.path.dirname(__file__),'templates')
@@ -49,14 +49,38 @@ class Handler(webapp2.RequestHandler):
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
 
-### Class for Main page
 class MainHandler(Handler):
     def get(self):
-        return "Hello World Get"
+        self.render("signupform.html", passwordsMatch = True, validUsername = True, 
+                        validPassword = True, validEmail = True)
     def post(self):
-        return "Hello World Post"
+        # Get user inputs and assign to variables
+        username = self.request.get("username")
+        password = self.request.get("password")
+        verify = self.request.get("verify")
+        email = self.request.get("email")
 
-### Connects routes with classes. Add as necessary.
+        # Assign results of verifications to variables
+        passwordsMatch = doPasswordsMatch(password, verify)
+        validUsername = valid_username(username)
+        validPassword = valid_password(password)
+        validEmail = valid_email(email)
+        # If no error pops, render welcome.html, otherwise render signupform and send error variables to it
+        if (passwordsMatch and validUsername and validPassword and validEmail): 
+            #self.render("welcome.html", username = username)
+            self.redirect('/welcome?username='+username)
+        else:
+            self.render("signupform.html", passwordsMatch = passwordsMatch, validUsername = validUsername, 
+                        validPassword = validPassword, validEmail = validEmail, username = username, email = email)
+class Welcome(Handler):
+    def get(self):
+        username = self.request.get("username")
+        self.render("welcome.html", username = username)
+
 app = webapp2.WSGIApplication([
-    ('/', MainHandler) 
+    ('/signup', MainHandler),
+    ('/welcome', Welcome) 
 ], debug=True)
+
+### To get cookie from user: self.request.cookies.get(name)
+### To send cookie to user: add header to response: self.response.headers.add_header('Set-Cookie', 'name=value; Path=/')
